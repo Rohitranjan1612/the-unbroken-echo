@@ -1,13 +1,13 @@
 import NovelCard from "@/components/shared/NovelCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/mdx";
+import { getAllContent } from "@/lib/api";
 
 export const metadata = {
   title: "Web Novel",
 };
 
-export default function NovelsPage() {
-  const novels = getAllContent("novels");
+export default async function NovelsPage() {
+  const novels = await getAllContent("novels");
 
   return (
     <section className="bg-navy py-20 text-cream">

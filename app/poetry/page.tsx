@@ -1,15 +1,16 @@
 import PoemCard from "@/components/shared/PoemCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/mdx";
+import { getAllContent, getPoetryThemes } from "@/lib/api";
 
 export const metadata = {
   title: "Poetry",
 };
 
-const themes = ["All", "Memory", "Love", "Echoes", "Loss", "Reflection"];
-
-export default function PoetryPage() {
-  const poems = getAllContent("poetry");
+export default async function PoetryPage() {
+  const [poems, themes] = await Promise.all([
+    getAllContent("poetry"),
+    getPoetryThemes(),
+  ]);
 
   return (
     <section className="py-20">

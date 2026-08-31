@@ -3,11 +3,12 @@ import { compileMDX } from "next-mdx-remote/rsc";
 import AuthorCard from "@/components/shared/AuthorCard";
 import NewsletterForm from "@/components/shared/NewsletterForm";
 import { mdxComponents } from "@/components/mdx/MDXComponents";
-import { getAllContent, getContentBySlug } from "@/lib/mdx";
+import { getAllContent, getContentBySlug } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
-export function generateStaticParams() {
-  return getAllContent("blog").map((post) => ({ slug: post.slug }));
+export async function generateStaticParams() {
+  const posts = await getAllContent("blog");
+  return posts.map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({
@@ -16,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getContentBySlug("blog", slug);
+  const post = await getContentBySlug("blog", slug);
   return {
     title: post?.title ?? "Blog",
     description: post?.excerpt,
@@ -29,7 +30,7 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getContentBySlug("blog", slug);
+  const post = await getContentBySlug("blog", slug);
 
   if (!post) {
     notFound();

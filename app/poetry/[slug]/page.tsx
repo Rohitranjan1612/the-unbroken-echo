@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import { mdxComponents } from "@/components/mdx/MDXComponents";
-import { getAllContent, getContentBySlug } from "@/lib/mdx";
+import { getAllContent, getContentBySlug } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
-export function generateStaticParams() {
-  return getAllContent("poetry").map((poem) => ({ slug: poem.slug }));
+export async function generateStaticParams() {
+  const poems = await getAllContent("poetry");
+  return poems.map((poem) => ({ slug: poem.slug }));
 }
 
 export async function generateMetadata({
@@ -14,7 +15,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const poem = getContentBySlug("poetry", slug);
+  const poem = await getContentBySlug("poetry", slug);
   return {
     title: poem?.title ?? "Poem",
     description: poem?.excerpt,
@@ -27,7 +28,7 @@ export default async function PoemPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const poem = getContentBySlug("poetry", slug);
+  const poem = await getContentBySlug("poetry", slug);
 
   if (!poem) {
     notFound();

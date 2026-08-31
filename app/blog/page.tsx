@@ -1,15 +1,16 @@
 import PostCard from "@/components/shared/PostCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/mdx";
+import { getAllContent, getBlogCategories } from "@/lib/api";
 
 export const metadata = {
   title: "Blog",
 };
 
-const categories = ["All", "Thoughts", "Fiction", "Tech & Writing", "Life", "Letters"];
-
-export default function BlogPage() {
-  const posts = getAllContent("blog");
+export default async function BlogPage() {
+  const [posts, categories] = await Promise.all([
+    getAllContent("blog"),
+    getBlogCategories(),
+  ]);
   const featured = posts.find((post) => post.featured);
   const rest = posts.filter((post) => post.slug !== featured?.slug);
 

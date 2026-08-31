@@ -1,0 +1,18 @@
+---
+description: Auto-commit and push changes after completing work
+alwaysApply: true
+---
+
+# Auto-commit and push
+
+After making code or config changes, commit and push before finishing the task:
+
+1. Run `git status` and `git diff` to review changes
+2. Do not commit secrets (`.env`, credentials, local config)
+3. Stage only relevant files
+4. Write a concise commit message focused on why
+5. Commit and push to the tracked remote branch
+
+Do not wait for the user to ask. Push after every commit unless the user explicitly says not to.
+
+Never amend unless the user explicitly requests it and git safety rules allow it.

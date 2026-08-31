@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import AuthorCard from "@/components/shared/AuthorCard";
 import { mdxComponents } from "@/components/mdx/MDXComponents";
-import { getAllContent, getContentBySlug } from "@/lib/mdx";
+import { getAllContent, getContentBySlug } from "@/lib/api";
 
-export function generateStaticParams() {
-  return getAllContent("books").map((book) => ({ slug: book.slug }));
+export async function generateStaticParams() {
+  const books = await getAllContent("books");
+  return books.map((book) => ({ slug: book.slug }));
 }
 
 export async function generateMetadata({
@@ -14,7 +15,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const book = getContentBySlug("books", slug);
+  const book = await getContentBySlug("books", slug);
   return {
     title: book?.title ?? "Book",
     description: book?.excerpt,
@@ -27,7 +28,7 @@ export default async function BookDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const book = getContentBySlug("books", slug);
+  const book = await getContentBySlug("books", slug);
 
   if (!book) {
     notFound();

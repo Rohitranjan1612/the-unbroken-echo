@@ -1,13 +1,13 @@
 import BookCard from "@/components/shared/BookCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/mdx";
+import { getAllContent } from "@/lib/api";
 
 export const metadata = {
   title: "Books",
 };
 
-export default function BooksPage() {
-  const books = getAllContent("books");
+export default async function BooksPage() {
+  const books = await getAllContent("books");
 
   return (
     <section className="py-20">

@@ -3,12 +3,12 @@ import BookCard from "@/components/shared/BookCard";
 import NewsletterForm from "@/components/shared/NewsletterForm";
 import PostCard from "@/components/shared/PostCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/mdx";
+import { getAllContent } from "@/lib/api";
 
-export default function Home() {
-  const [book] = getAllContent("books");
-  const posts = getAllContent("blog").slice(0, 3);
-  const [poem] = getAllContent("poetry");
+export default async function Home() {
+  const [book] = await getAllContent("books");
+  const posts = (await getAllContent("blog")).slice(0, 3);
+  const [poem] = await getAllContent("poetry");
 
   return (
     <>
