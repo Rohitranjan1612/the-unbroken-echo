@@ -1,13 +1,16 @@
 import BookCard from "@/components/shared/BookCard";
 import SectionHeader from "@/components/shared/SectionHeader";
-import { getAllContent } from "@/lib/api";
+import { getAllContent, getAuthorProfile } from "@/lib/api";
 
 export const metadata = {
   title: "Books",
 };
 
 export default async function BooksPage() {
-  const books = await getAllContent("books");
+  const [books, author] = await Promise.all([
+    getAllContent("books"),
+    getAuthorProfile(),
+  ]);
 
   return (
     <section className="py-20">
@@ -19,7 +22,11 @@ export default async function BooksPage() {
         />
         <div className="space-y-8">
           {books.map((book) => (
-            <BookCard key={book.slug} book={book} />
+            <BookCard
+              key={book.slug}
+              book={book}
+              authorName={author?.displayName}
+            />
           ))}
         </div>
       </div>

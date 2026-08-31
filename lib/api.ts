@@ -1,19 +1,25 @@
 import { cookies } from "next/headers";
 import { getApiUrl } from "./config";
-import {
-  getAllContent as getAllContentFromMdx,
-  getContentBySlug as getContentBySlugFromMdx,
-  type ContentEntry,
-} from "./mdx";
-import type { BlogPost, Book, ContentKind, Novel, Poem } from "./types";
+import type {
+  AuthorProfile,
+  BlogPost,
+  Book,
+  ContentEntry,
+  ContentKind,
+  Novel,
+  Poem,
+} from "./types";
 
 export type { ContentEntry };
 
-const DEFAULT_BUY_LINKS: Book["buyLinks"] = {
-  amazon: "#",
-  flipkart: "#",
-  bluerose: "#",
-};
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 type ApiBookSummary = {
   slug: string;
@@ -22,16 +28,16 @@ type ApiBookSummary = {
   excerpt: string;
   genre: string;
   date: string;
-};
-
-type ApiBookDetail = ApiBookSummary & {
   publisher: string;
   published: string;
   pages: number;
+  buyLinks: Book["buyLinks"];
+};
+
+type ApiBookDetail = ApiBookSummary & {
   ageRange: string;
   isbn: string;
   themes: string[];
-  buyLinks: Book["buyLinks"];
   body: string;
 };
 
@@ -74,6 +80,35 @@ type ApiMetaOption = {
   label: string;
 };
 
+const EMPTY_BUY_LINKS: Book["buyLinks"] = {
+  amazon: "",
+  flipkart: "",
+  bluerose: "",
+};
+
+async function fetchApi<T>(
+  path: string,
+  init: RequestInit & { cookieHeader?: string } = {},
+): Promise<T> {
+  const { cookieHeader, ...rest } = init;
+  const headers = new Headers(rest.headers);
+  if (cookieHeader) {
+    headers.set("Cookie", cookieHeader);
+  }
+
+  const res = await fetch(`${getApiUrl()}${path}`, {
+    ...rest,
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await res.text());
+  }
+
+  return res.json() as Promise<T>;
+}
+
 async function fetchApiServer<T>(path: string, init?: RequestInit): Promise<T | null> {
   let cookieHeader = "";
   try {
@@ -87,24 +122,32 @@ async function fetchApiServer<T>(path: string, init?: RequestInit): Promise<T | 
   }
 
   try {
-    const res = await fetch(`${getApiUrl()}${path}`, {
-      ...init,
-      headers: {
-        ...(init?.headers ?? {}),
-        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) return null;
-    return res.json() as Promise<T>;
-  } catch {
+    return await fetchApi<T>(path, { ...init, cookieHeader });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    console.warn(`API unavailable for ${path}:`, error);
     return null;
   }
 }
 
 function toDateString(iso: string): string {
   return iso.split("T")[0] ?? iso;
+}
+
+function normalizeBuyLinks(
+  buyLinks: Book["buyLinks"] | null | undefined,
+): Book["buyLinks"] {
+  if (!buyLinks || typeof buyLinks !== "object") {
+    return EMPTY_BUY_LINKS;
+  }
+
+  return {
+    amazon: String(buyLinks.amazon ?? ""),
+    flipkart: String(buyLinks.flipkart ?? ""),
+    bluerose: String(buyLinks.bluerose ?? ""),
+  };
 }
 
 function mapBook(api: ApiBookSummary | ApiBookDetail): Book {
@@ -116,13 +159,13 @@ function mapBook(api: ApiBookSummary | ApiBookDetail): Book {
     excerpt: api.excerpt,
     genre: api.genre,
     date: toDateString(api.date),
-    publisher: detail.publisher ?? "",
-    published: detail.published ?? "",
-    pages: detail.pages ?? 0,
+    publisher: api.publisher ?? "",
+    published: api.published ?? "",
+    pages: api.pages ?? 0,
     ageRange: detail.ageRange ?? "",
     isbn: detail.isbn ?? "",
     themes: detail.themes ?? [],
-    buyLinks: detail.buyLinks ?? DEFAULT_BUY_LINKS,
+    buyLinks: normalizeBuyLinks(api.buyLinks),
   };
 }
 
@@ -131,7 +174,7 @@ function mapBlogPost(api: ApiBlogSummary): BlogPost {
     slug: api.slug,
     title: api.title,
     excerpt: api.excerpt,
-    category: api.category as BlogPost["category"],
+    category: api.category,
     readingTime: api.readingTime,
     date: toDateString(api.date),
   };
@@ -142,7 +185,7 @@ function mapPoem(api: ApiPoemSummary): Poem {
     slug: api.slug,
     title: api.title,
     excerpt: api.excerpt,
-    theme: api.theme as Poem["theme"],
+    theme: api.theme,
     date: toDateString(api.date),
   };
 }
@@ -158,20 +201,24 @@ function mapNovel(api: ApiNovelSummary): Novel {
   };
 }
 
+export async function getAuthorProfile(): Promise<AuthorProfile | null> {
+  return fetchApiServer<AuthorProfile>("/meta/author");
+}
+
 export async function getBlogCategories(): Promise<string[]> {
   const categories = await fetchApiServer<ApiMetaOption[]>("/meta/blog-categories");
-  if (categories) {
-    return ["All", ...categories.map((item) => item.label)];
+  if (!categories?.length) {
+    return ["All"];
   }
-  return ["All", "Thoughts", "Fiction", "Tech & Writing", "Life", "Letters"];
+  return ["All", ...categories.map((item) => item.label)];
 }
 
 export async function getPoetryThemes(): Promise<string[]> {
   const themes = await fetchApiServer<ApiMetaOption[]>("/meta/poetry-themes");
-  if (themes) {
-    return ["All", ...themes.map((item) => item.label)];
+  if (!themes?.length) {
+    return ["All"];
   }
-  return ["All", "Memory", "Love", "Echoes", "Loss", "Reflection"];
+  return ["All", ...themes.map((item) => item.label)];
 }
 
 export async function getAllContent<K extends ContentKind>(
@@ -180,70 +227,53 @@ export async function getAllContent<K extends ContentKind>(
   switch (kind) {
     case "books": {
       const books = await fetchApiServer<ApiBookSummary[]>("/books");
-      if (books) {
-        const entries = await Promise.all(
-          books.map(async (summary) => {
-            const detail = await fetchApiServer<ApiBookDetail>(
-              `/books/${summary.slug}`,
-            );
-            if (detail) {
-              return {
-                ...mapBook(detail),
-                body: detail.body,
-              } as unknown as ContentEntry<K>;
-            }
-            return {
-              ...mapBook(summary),
+      return (
+        books?.map(
+          (book) =>
+            ({
+              ...mapBook(book),
               body: "",
-            } as unknown as ContentEntry<K>;
-          }),
-        );
-        return entries;
-      }
-      break;
+            }) as unknown as ContentEntry<K>,
+        ) ?? []
+      );
     }
     case "blog": {
       const posts = await fetchApiServer<ApiBlogSummary[]>("/blog");
-      if (posts) {
-        return posts.map(
+      return (
+        posts?.map(
           (post) =>
             ({
               ...mapBlogPost(post),
               body: "",
             }) as unknown as ContentEntry<K>,
-        );
-      }
-      break;
+        ) ?? []
+      );
     }
     case "poetry": {
       const poems = await fetchApiServer<ApiPoemSummary[]>("/poetry");
-      if (poems) {
-        return poems.map(
+      return (
+        poems?.map(
           (poem) =>
             ({
               ...mapPoem(poem),
               body: "",
             }) as unknown as ContentEntry<K>,
-        );
-      }
-      break;
+        ) ?? []
+      );
     }
     case "novels": {
       const novels = await fetchApiServer<ApiNovelSummary[]>("/novels");
-      if (novels) {
-        return novels.map(
+      return (
+        novels?.map(
           (novel) =>
             ({
               ...mapNovel(novel),
               body: "",
             }) as unknown as ContentEntry<K>,
-        );
-      }
-      break;
+        ) ?? []
+      );
     }
   }
-
-  return getAllContentFromMdx(kind);
 }
 
 export async function getContentBySlug<K extends ContentKind>(
@@ -253,35 +283,43 @@ export async function getContentBySlug<K extends ContentKind>(
   switch (kind) {
     case "books": {
       const book = await fetchApiServer<ApiBookDetail>(`/books/${slug}`);
-      if (book) {
-        return {
-          ...mapBook(book),
-          body: book.body,
-        } as unknown as ContentEntry<K>;
-      }
-      break;
+      if (!book) return null;
+      return {
+        ...mapBook(book),
+        body: book.body,
+      } as unknown as ContentEntry<K>;
     }
     case "blog": {
       const post = await fetchApiServer<ApiBlogDetail>(`/blog/${slug}`);
-      if (post) {
-        return {
-          ...mapBlogPost(post),
-          body: post.body,
-        } as unknown as ContentEntry<K>;
-      }
-      break;
+      if (!post) return null;
+      return {
+        ...mapBlogPost(post),
+        body: post.body,
+      } as unknown as ContentEntry<K>;
     }
     case "poetry": {
       const poem = await fetchApiServer<ApiPoemDetail>(`/poetry/${slug}`);
-      if (poem) {
-        return {
-          ...mapPoem(poem),
-          body: poem.body,
-        } as unknown as ContentEntry<K>;
-      }
-      break;
+      if (!poem) return null;
+      return {
+        ...mapPoem(poem),
+        body: poem.body,
+      } as unknown as ContentEntry<K>;
+    }
+    case "novels": {
+      const novels = await fetchApiServer<ApiNovelSummary[]>("/novels");
+      const novel = novels?.find((entry) => entry.slug === slug);
+      if (!novel) return null;
+      return {
+        ...mapNovel(novel),
+        body: "",
+      } as unknown as ContentEntry<K>;
     }
   }
+}
 
-  return getContentBySlugFromMdx(kind, slug);
+export async function getFeaturedBookBuyLinks(): Promise<Book["buyLinks"] | null> {
+  const books = await fetchApiServer<ApiBookSummary[]>("/books");
+  const [book] = books ?? [];
+  if (!book) return null;
+  return normalizeBuyLinks(book.buyLinks);
 }

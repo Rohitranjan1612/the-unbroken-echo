@@ -3,25 +3,27 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
+import { getSiteUrl, siteConfig } from "@/lib/config";
 import "./globals.css";
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://theunbrokenecho.com"),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "The Unbroken Echo | Rohit Ranjan",
-    template: "%s | The Unbroken Echo",
+    default: `${siteConfig.name} | ${siteConfig.author}`,
+    template: `%s | ${siteConfig.name}`,
   },
-  description:
-    "A literary platform for Rohit Ranjan: books, poetry, essays, and reflections where code meets prose.",
+  description: siteConfig.description,
   alternates: {
     canonical: "/",
   },
-  authors: [{ name: "Rohit Ranjan" }],
-  creator: "Rohit Ranjan",
-  publisher: "The Unbroken Echo",
+  authors: [{ name: siteConfig.author }],
+  creator: siteConfig.author,
+  publisher: siteConfig.name,
   keywords: [
-    "The Unbroken Echo",
-    "Rohit Ranjan",
+    siteConfig.name,
+    siteConfig.author,
     "Shadows of Us",
     "Indian author",
     "contemporary fiction",
@@ -29,18 +31,16 @@ export const metadata: Metadata = {
     "literary blog",
   ],
   openGraph: {
-    title: "The Unbroken Echo",
-    description:
-      "Stories, poems, and reflections exploring love, memory, and the quiet echoes we carry.",
-    url: "https://theunbrokenecho.com",
-    siteName: "The Unbroken Echo",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    url: siteUrl,
+    siteName: siteConfig.name,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Unbroken Echo",
-    description:
-      "Books, poetry, essays, and reflections from Rohit Ranjan.",
+    title: siteConfig.name,
+    description: siteConfig.description,
   },
 };
 
@@ -58,11 +58,11 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              name: "The Unbroken Echo",
-              url: "https://theunbrokenecho.com",
+              name: siteConfig.name,
+              url: siteUrl,
               author: {
                 "@type": "Person",
-                name: "Rohit Ranjan",
+                name: siteConfig.author,
                 jobTitle: "Software Engineer and Author",
               },
             }),

@@ -1,10 +1,18 @@
 import SectionHeader from "@/components/shared/SectionHeader";
+import { getAuthorProfile } from "@/lib/api";
+import { notFound } from "next/navigation";
 
 export const metadata = {
   title: "Contact",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const author = await getAuthorProfile();
+
+  if (!author) {
+    notFound();
+  }
+
   return (
     <section className="py-20">
       <div className="container grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
@@ -14,12 +22,14 @@ export default function ContactPage() {
             title="For collaborations, interviews, and reader notes."
             copy="Open to book club requests, media conversations, literary collaborations, and thoughtful letters from readers."
           />
-          <div className="ui-text text-sm uppercase tracking-[0.12em] text-ghost">
-            Direct email:{" "}
-            <a className="text-gold-dim" href="mailto:rohitranjan1612@gmail.com">
-              rohitranjan1612@gmail.com
-            </a>
-          </div>
+          {author.contactEmail ? (
+            <div className="ui-text text-sm uppercase tracking-[0.12em] text-ghost">
+              Direct email:{" "}
+              <a className="text-gold-dim" href={`mailto:${author.contactEmail}`}>
+                {author.contactEmail}
+              </a>
+            </div>
+          ) : null}
         </div>
         <form
           action="/api/contact"

@@ -1,7 +1,13 @@
 import Link from "next/link";
 import type { Book } from "@/lib/types";
 
-export default function BookCard({ book }: { book: Book }) {
+export default function BookCard({
+  book,
+  authorName,
+}: {
+  book: Book;
+  authorName?: string;
+}) {
   return (
     <article className="grid gap-8 border border-cream-dark bg-white p-6 shadow-[0_14px_40px_rgba(15,27,45,0.08)] md:grid-cols-[220px_1fr]">
       <div className="aspect-[2/3] border border-gold/30 bg-gradient-to-br from-navy-light to-navy p-6 text-center text-cream">
@@ -11,9 +17,11 @@ export default function BookCard({ book }: { book: Book }) {
             {book.subtitle}
           </p>
           <div className="mt-8 h-px w-12 bg-gold" />
-          <p className="ui-text mt-8 text-xs uppercase tracking-[0.18em] text-cream/60">
-            Rohit Ranjan
-          </p>
+          {authorName ? (
+            <p className="ui-text mt-8 text-xs uppercase tracking-[0.18em] text-cream/60">
+              {authorName}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-col justify-center">

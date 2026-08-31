@@ -1,16 +1,36 @@
 import Link from "next/link";
+import { getFeaturedBookBuyLinks } from "@/lib/api";
+import { siteConfig } from "@/lib/config";
 
-export default function Footer() {
+export default async function Footer() {
+  const buyLinks = await getFeaturedBookBuyLinks();
+  const buyColumnLinks: [string, string][] = [];
+
+  if (buyLinks?.amazon) {
+    buyColumnLinks.push(["Amazon", buyLinks.amazon]);
+  }
+  if (buyLinks?.flipkart) {
+    buyColumnLinks.push(["Flipkart", buyLinks.flipkart]);
+  }
+  if (buyLinks?.bluerose) {
+    buyColumnLinks.push(["BlueRose", buyLinks.bluerose]);
+  }
+
   return (
     <footer className="bg-navy px-0 py-14 text-cream">
-      <div className="container grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div
+        className={`container grid gap-10 ${
+          buyColumnLinks.length > 0
+            ? "md:grid-cols-[1.4fr_1fr_1fr_1fr]"
+            : "md:grid-cols-[1.4fr_1fr_1fr]"
+        }`}
+      >
         <div>
           <Link href="/" className="font-display text-3xl font-semibold">
             The <span className="text-gold">Unbroken</span> Echo
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-cream/62">
-            A literary platform for stories, poems, and reflections exploring
-            memory, love, and the quiet echoes we carry.
+            {siteConfig.description}
           </p>
         </div>
 
@@ -31,18 +51,15 @@ export default function Footer() {
             ["Web Novel", "/novels"],
           ]}
         />
-        <FooterColumn
-          title="Buy the Book"
-          links={[
-            ["Amazon", "#"],
-            ["Flipkart", "#"],
-            ["BlueRose", "#"],
-          ]}
-        />
+        {buyColumnLinks.length > 0 ? (
+          <FooterColumn title="Buy the Book" links={buyColumnLinks} />
+        ) : null}
       </div>
       <div className="container mt-12 flex flex-col gap-2 border-t border-cream/10 pt-6 text-xs text-cream/48 md:flex-row md:justify-between">
-        <p>© 2026 The Unbroken Echo · Rohit Ranjan. All rights reserved.</p>
-        <p>Built with Next.js · Deployed on Vercel</p>
+        <p>
+          © {new Date().getFullYear()} {siteConfig.name} · {siteConfig.author}. All
+          rights reserved.
+        </p>
       </div>
     </footer>
   );
@@ -63,7 +80,13 @@ function FooterColumn({
       <ul className="mt-4 space-y-2 text-sm text-cream/65">
         {links.map(([label, href]) => (
           <li key={label}>
-            <Link className="transition hover:text-gold" href={href}>
+            <Link
+              className="transition hover:text-gold"
+              href={href}
+              {...(href.startsWith("http")
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+            >
               {label}
             </Link>
           </li>

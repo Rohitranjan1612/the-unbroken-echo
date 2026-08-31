@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import AuthorCard from "@/components/shared/AuthorCard";
 import { mdxComponents } from "@/components/mdx/MDXComponents";
-import { getAllContent, getContentBySlug } from "@/lib/api";
+import { getAllContent, getAuthorProfile, getContentBySlug } from "@/lib/api";
 
 export async function generateStaticParams() {
   const books = await getAllContent("books");
@@ -28,11 +28,20 @@ export default async function BookDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const book = await getContentBySlug("books", slug);
+  const [book, author] = await Promise.all([
+    getContentBySlug("books", slug),
+    getAuthorProfile(),
+  ]);
 
   if (!book) {
     notFound();
   }
+
+  const buyLinks = [
+    { label: "Amazon", href: book.buyLinks.amazon },
+    { label: "Flipkart", href: book.buyLinks.flipkart },
+    { label: "BlueRose", href: book.buyLinks.bluerose },
+  ].filter((link) => link.href);
 
   const { content } = await compileMDX({
     source: book.body,
@@ -51,7 +60,7 @@ export default async function BookDetailPage({
               </p>
               <div className="my-10 h-px w-16 bg-gold" />
               <p className="ui-text text-xs uppercase tracking-[0.2em] text-cream/50">
-                Rohit Ranjan
+                {author?.displayName ?? ""}
               </p>
             </div>
           </div>
@@ -78,17 +87,21 @@ export default async function BookDetailPage({
                 </div>
               ))}
             </dl>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a className="btn btn-primary" href={book.buyLinks.amazon}>
-                Amazon
-              </a>
-              <a className="btn btn-outline" href={book.buyLinks.flipkart}>
-                Flipkart
-              </a>
-              <a className="btn btn-outline" href={book.buyLinks.bluerose}>
-                BlueRose
-              </a>
-            </div>
+            {buyLinks.length > 0 ? (
+              <div className="mt-8 flex flex-wrap gap-3">
+                {buyLinks.map((link, index) => (
+                  <a
+                    key={link.label}
+                    className={index === 0 ? "btn btn-primary" : "btn btn-outline"}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
